@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "python",
+  "steps": {
+    "install": {
+      "commands": [
+        "pip install -r xplm_bot/requirements.txt"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "python xplm_bot/main.py"
+  }
+}
