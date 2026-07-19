@@ -22,6 +22,15 @@ def build_app():
     app.add_handler(CommandHandler("start", start.start))
     app.add_handler(CallbackQueryHandler(start.home_callback, pattern="^menu:home$"))
 
+    # ── slash-command shortcuts (mirrors BotFather command list) ────
+    app.add_handler(CommandHandler("order", order.order_cmd))
+    app.add_handler(CommandHandler("dashboard", menu.dashboard_cmd))
+    app.add_handler(CommandHandler("history", menu.history_cmd))
+    app.add_handler(CommandHandler("referral", menu.referral_cmd))
+    app.add_handler(CommandHandler("support", menu.support_cmd))
+    app.add_handler(CommandHandler("status", menu.status_cmd))
+    app.add_handler(CommandHandler("admin", admin.admin_cmd))
+
     # ── main menu sections ──────────────────────────────────────────
     app.add_handler(CallbackQueryHandler(menu.dashboard, pattern="^menu:dashboard$"))
     app.add_handler(CallbackQueryHandler(menu.profile, pattern="^menu:profile$"))
@@ -37,6 +46,7 @@ def build_app():
     app.add_handler(CallbackQueryHandler(order.show_product, pattern="^prod:"))
     app.add_handler(CallbackQueryHandler(order.buy_start, pattern="^buy:"))
     app.add_handler(CallbackQueryHandler(order.choose_qty, pattern="^qty:"))
+    app.add_handler(CallbackQueryHandler(order.qty_back, pattern="^qtyback:"))
     app.add_handler(CallbackQueryHandler(order.choose_payment, pattern="^pay:"))
 
     # proof submission (photo or text) — only acts if user_data flag is set
@@ -70,6 +80,16 @@ def build_app():
         per_message=False,
     )
     app.add_handler(add_product_conv)
+
+    bulk_add_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(admin.bulk_add_start, pattern="^admin:bulk_add$")],
+        states={
+            admin.BULK_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin.bulk_add_receive)],
+        },
+        fallbacks=[CallbackQueryHandler(admin.cancel_conv, pattern="^menu:home$")],
+        per_message=False,
+    )
+    app.add_handler(bulk_add_conv)
 
     add_payment_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(admin.add_payment_start, pattern="^admin:add_payment$")],
