@@ -42,6 +42,6 @@ async def post_to_channel(bot, chat_id: str, text: str, **kwargs):
     if not chat_id:
         return
     try:
-        await bot.send_message(chat_id, text, parse_mode="Markdown", **kwargs)
+        await bot.send_message(chat_id, text, parse_mode="HTML", **kwargs)
     except Exception as e:
         print(f"[warn] failed to post to channel {chat_id}: {e}")
