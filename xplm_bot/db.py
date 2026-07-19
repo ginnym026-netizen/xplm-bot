@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS stock_items (
 
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_code TEXT,
     user_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
     quantity INTEGER DEFAULT 1,
@@ -84,6 +85,15 @@ def init_db():
             conn.execute(
                 "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v)
             )
+        # migration for DBs created before order_code existed
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(orders)")]
+        if "order_code" not in cols:
+            conn.execute("ALTER TABLE orders ADD COLUMN order_code TEXT")
+        # backfill any existing orders that don't have a code yet
+        rows = conn.execute("SELECT id, created_at FROM orders WHERE order_code IS NULL").fetchall()
+        for r in rows:
+            code = f"XPLM-{time.strftime('%y%m%d', time.localtime(r['created_at'] or time.time()))}-{r['id']:05d}"
+            conn.execute("UPDATE orders SET order_code=? WHERE id=?", (code, r["id"]))
 
 
 # ── settings ──────────────────────────────────────────────────────────
@@ -252,10 +262,13 @@ def create_order(user_id, product_id, quantity, amount_usd, payment_method, paym
     with get_db() as conn:
         cur = conn.execute(
             "INSERT INTO orders (user_id, product_id, quantity, amount_usd, payment_method, "
-            "payment_ref, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'awaiting_confirmation', ?, ?)",
+            "payment_ref, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)",
             (user_id, product_id, quantity, amount_usd, payment_method, payment_ref, int(time.time()), int(time.time())),
         )
-        return cur.lastrowid
+        order_id = cur.lastrowid
+        code = f"XPLM-{time.strftime('%y%m%d')}-{order_id:05d}"
+        conn.execute("UPDATE orders SET order_code=? WHERE id=?", (code, order_id))
+        return {"id": order_id, "order_code": code}
 
 
 def attach_proof(order_id: int, file_id: str):
